@@ -1,5 +1,4 @@
 export default async function handler(req, res) {
-  // Allow CORS
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
@@ -8,6 +7,11 @@ export default async function handler(req, res) {
 
   const { word } = req.body;
   if (!word) return res.status(400).json({ error: 'No word provided' });
+
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  console.log('API key present:', !!apiKey);
+  console.log('API key prefix:', apiKey ? apiKey.substring(0, 10) : 'MISSING');
+  if (!apiKey) return res.status(500).json({ error: 'ANTHROPIC_API_KEY is missing from environment variables' });
 
   const SYSTEM_PROMPT = `You are the official translator for Meowlumi, a constructed language. Use these roots as building blocks:
 mew=I/new/small, luma/lumori=light/see, flurr=good, mreek=bad, miru=go, miyah=come, nurrle=sleep, pawvi=eat, sipurr=drink, nyaveh=speak, purrelu=make, frishu=find, shimori=help, nurrika=take, pawshu=give, wemi=together, kishomi=big, mewlini=small, neko/nekowa=not/dark, lumashi=love/beautiful, purrika=soft, fushiki=fast, shimuri=happy, mireeka=sad, kishi=person, nurra=thing, lumara=place, shori=path, pawluri=warm, nurreli=cold, wesha=old, mewshi=new, fusha=run, nura=up, umi=all, nya=yes, shin=time, purrshin=past.
@@ -19,7 +23,7 @@ Respond ONLY with JSON (no markdown): {"meowlumi":"word","pos":"n/v/adj/adv/inte
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-api-key': process.env.ANTHROPIC_API_KEY,
+        'x-api-key': apiKey,
         'anthropic-version': '2023-06-01'
       },
       body: JSON.stringify({
@@ -30,18 +34,22 @@ Respond ONLY with JSON (no markdown): {"meowlumi":"word","pos":"n/v/adj/adv/inte
       })
     });
 
+    const responseText = await response.text();
+    console.log('Anthropic status:', response.status);
+    console.log('Anthropic response:', responseText);
+
     if (!response.ok) {
-      const err = await response.text();
-      return res.status(500).json({ error: `Anthropic error: ${err}` });
+      return res.status(500).json({ error: `Anthropic ${response.status}: ${responseText}` });
     }
 
-    const data = await response.json();
+    const data = JSON.parse(responseText);
     const text = data.content?.[0]?.text || '';
     const clean = text.replace(/```json|```/g, '').trim();
     const parsed = JSON.parse(clean);
     return res.status(200).json(parsed);
 
   } catch (e) {
+    console.log('Caught error:', e.message);
     return res.status(500).json({ error: e.message });
   }
 }
