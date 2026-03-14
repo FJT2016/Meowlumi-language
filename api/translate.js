@@ -9,9 +9,7 @@ export default async function handler(req, res) {
   if (!word) return res.status(400).json({ error: 'No word provided' });
 
   const apiKey = process.env.ANTHROPIC_API_KEY;
-  console.log('API key present:', !!apiKey);
-  console.log('API key prefix:', apiKey ? apiKey.substring(0, 10) : 'MISSING');
-  if (!apiKey) return res.status(500).json({ error: 'ANTHROPIC_API_KEY is missing from environment variables' });
+  if (!apiKey) return res.status(500).json({ error: 'ANTHROPIC_API_KEY is missing' });
 
   const SYSTEM_PROMPT = `You are the official translator for Meowlumi, a constructed language. Use these roots as building blocks:
 mew=I/new/small, luma/lumori=light/see, flurr=good, mreek=bad, miru=go, miyah=come, nurrle=sleep, pawvi=eat, sipurr=drink, nyaveh=speak, purrelu=make, frishu=find, shimori=help, nurrika=take, pawshu=give, wemi=together, kishomi=big, mewlini=small, neko/nekowa=not/dark, lumashi=love/beautiful, purrika=soft, fushiki=fast, shimuri=happy, mireeka=sad, kishi=person, nurra=thing, lumara=place, shori=path, pawluri=warm, nurreli=cold, wesha=old, mewshi=new, fusha=run, nura=up, umi=all, nya=yes, shin=time, purrshin=past.
@@ -27,7 +25,7 @@ Respond ONLY with JSON (no markdown): {"meowlumi":"word","pos":"n/v/adj/adv/inte
         'anthropic-version': '2023-06-01'
       },
       body: JSON.stringify({
-        model: 'claude-haiku-4-5-20251001',
+        model: 'claude-3-haiku-20240307',
         max_tokens: 300,
         system: SYSTEM_PROMPT,
         messages: [{ role: 'user', content: `Translate to Meowlumi: "${word}"` }]
