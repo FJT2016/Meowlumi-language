@@ -8,8 +8,8 @@ export default async function handler(req, res) {
   const { word } = req.body;
   if (!word) return res.status(400).json({ error: 'No word provided' });
 
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) return res.status(500).json({ error: 'ANTHROPIC_API_KEY is missing' });
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) return res.status(500).json({ error: 'OPENAI_API_KEY is missing' });
 
   const SYSTEM_PROMPT = `You are the official translator for Meowlumi, a constructed language. Use these roots as building blocks:
 mew=I/new/small, luma/lumori=light/see, flurr=good, mreek=bad, miru=go, miyah=come, nurrle=sleep, pawvi=eat, sipurr=drink, nyaveh=speak, purrelu=make, frishu=find, shimori=help, nurrika=take, pawshu=give, wemi=together, kishomi=big, mewlini=small, neko/nekowa=not/dark, lumashi=love/beautiful, purrika=soft, fushiki=fast, shimuri=happy, mireeka=sad, kishi=person, nurra=thing, lumara=place, shori=path, pawluri=warm, nurreli=cold, wesha=old, mewshi=new, fusha=run, nura=up, umi=all, nya=yes, shin=time, purrshin=past.
@@ -17,31 +17,32 @@ Rules: Join 2-3 roots with hyphens. Keep it musical and feline-sounding.
 Respond ONLY with JSON (no markdown): {"meowlumi":"word","pos":"n/v/adj/adv/interj","breakdown":"which roots and why"}`;
 
   try {
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01'
+        'Authorization': `Bearer ${apiKey}`
       },
       body: JSON.stringify({
-        model: 'claude-3-haiku-20240307',
+        model: 'gpt-4o-mini',
         max_tokens: 300,
-        system: SYSTEM_PROMPT,
-        messages: [{ role: 'user', content: `Translate to Meowlumi: "${word}"` }]
+        messages: [
+          { role: 'system', content: SYSTEM_PROMPT },
+          { role: 'user', content: `Translate to Meowlumi: "${word}"` }
+        ]
       })
     });
 
     const responseText = await response.text();
-    console.log('Anthropic status:', response.status);
-    console.log('Anthropic response:', responseText);
+    console.log('OpenAI status:', response.status);
+    console.log('OpenAI response:', responseText);
 
     if (!response.ok) {
-      return res.status(500).json({ error: `Anthropic ${response.status}: ${responseText}` });
+      return res.status(500).json({ error: `OpenAI ${response.status}: ${responseText}` });
     }
 
     const data = JSON.parse(responseText);
-    const text = data.content?.[0]?.text || '';
+    const text = data.choices?.[0]?.message?.content || '';
     const clean = text.replace(/```json|```/g, '').trim();
     const parsed = JSON.parse(clean);
     return res.status(200).json(parsed);
